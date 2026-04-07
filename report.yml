@@ -1,0 +1,34 @@
+name: Family Assessment Auto-Report
+
+on:
+  repository_dispatch:
+    types: [new_submission] # 触发条件
+
+jobs:
+  build-report:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        pip install reportlab matplotlib numpy requests
+
+    - name: Generate Cloud Report
+      env:
+        FAMILY_CODE: ${{ github.event.client_payload.family_code }}
+      run: |
+        # 运行刚才的脚本获取云端数据并生成报告
+        python3 cloud_processor.py $FAMILY_CODE
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: family-report-${{ github.event.client_payload.family_code }}
+        path: "*.pdf"
