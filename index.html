@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>青春期家庭系统评估工具 - 临床云端版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        .page { display: none; }
+        .page.active { display: block; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .spinner { border: 2px solid #f3f3f3; border-top: 2px solid #2563eb; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen p-4 md:p-8 font-sans text-slate-800">
+    <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div class="bg-blue-600 h-2"></div>
+        
+        <div class="p-8">
+            <header class="text-center mb-10">
+                <h1 class="text-2xl font-bold text-slate-800 tracking-tight">青春期家庭系统多视角评估</h1>
+                <div class="flex items-center justify-center gap-2 mt-3">
+                    <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded uppercase">Cloud Edition</span>
+                    <span class="text-slate-400 text-xs">v4.0.0</span>
+                </div>
+            </header>
+
+            <!-- 1. 初始信息页 -->
+            <div id="init-page" class="page active fade-in">
+                <div class="bg-blue-50 border border-blue-100 rounded-xl p-6 mb-8">
+                    <h3 class="font-bold text-blue-900 mb-2 flex items-center gap-2">ℹ️ 填写说明</h3>
+                    <ul class="text-sm text-blue-800 space-y-2 opacity-90">
+                        <li>• 填写完成后数据将<b>自动上传云端</b>，无需手动发送文件。</li>
+                        <li>• 请确保家庭所有成员使用相同的<b>【家庭识别码】</b>。</li>
+                        <li>• 本评估仅用于家庭动态分析，所有数据将严格加密保密。</li>
+                    </ul>
+                </div>
+
+                <div class="mb-10">
+                    <label class="block text-sm font-bold text-slate-700 mb-2 px-1">家庭识别码 (Family Code)</label>
+                    <input type="text" id="family-code" placeholder="输入您的专属识别码" 
+                        class="w-full p-4 border-2 border-slate-200 rounded-xl focus:border-blue-500 focus:ring-4 focus:ring-blue-50 outline-none transition-all text-lg font-mono uppercase">
+                </div>
+
+                <h2 class="text-lg font-bold mb-6 text-slate-800 flex items-center gap-2">
+                    <span class="w-1.5 h-6 bg-blue-600 rounded-full"></span>
+                    选择您的评估角色
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button onclick="checkAndStart('母亲')" class="group p-6 border-2 border-slate-100 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-center">
+                        <div class="text-3xl mb-2">👩‍💼</div><div class="font-bold text-slate-700">母亲</div>
+                    </button>
+                    <button onclick="checkAndStart('父亲')" class="group p-6 border-2 border-slate-100 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-center">
+                        <div class="text-3xl mb-2">👨‍💼</div><div class="font-bold text-slate-700">父亲</div>
+                    </button>
+                    <button onclick="checkAndStart('孩子')" class="group p-6 border-2 border-slate-100 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-center">
+                        <div class="text-3xl mb-2">🧒</div><div class="font-bold text-slate-700">孩子</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. 答题页 -->
+            <div id="survey-page" class="page fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex flex-col">
+                        <span id="dimension-tag" class="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-1"></span>
+                        <div class="flex items-center gap-2">
+                            <div class="h-2 w-24 bg-slate-100 rounded-full overflow-hidden">
+                                <div id="progress-bar" class="h-full bg-blue-500 transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                            <span id="progress-text" class="text-xs font-bold text-slate-400">0/0</span>
+                        </div>
+                    </div>
+                    <span id="role-badge" class="px-3 py-1 bg-slate-100 rounded-full text-xs font-bold text-slate-500"></span>
+                </div>
+                <div id="question-container" class="py-4">
+                    <p id="question-text" class="text-xl text-slate-800 mb-10 font-medium leading-relaxed min-h-[80px]"></p>
+                    <div class="grid grid-cols-5 gap-3">
+                        <button onclick="recordAnswer(1)" class="group flex flex-col items-center p-4 border-2 border-slate-50 rounded-2xl hover:border-rose-400 hover:bg-rose-50 transition-all"><span class="text-2xl">😠</span></button>
+                        <button onclick="recordAnswer(2)" class="group flex flex-col items-center p-4 border-2 border-slate-50 rounded-2xl hover:border-orange-400 hover:bg-orange-50 transition-all"><span class="text-2xl">🙁</span></button>
+                        <button onclick="recordAnswer(3)" class="group flex flex-col items-center p-4 border-2 border-slate-50 rounded-2xl hover:border-slate-400 hover:bg-slate-50 transition-all"><span class="text-2xl">😐</span></button>
+                        <button onclick="recordAnswer(4)" class="group flex flex-col items-center p-4 border-2 border-slate-50 rounded-2xl hover:border-emerald-400 hover:bg-emerald-50 transition-all"><span class="text-2xl">🙂</span></button>
+                        <button onclick="recordAnswer(5)" class="group flex flex-col items-center p-4 border-2 border-slate-50 rounded-2xl hover:border-blue-400 hover:bg-blue-50 transition-all"><span class="text-2xl">😊</span></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. 结果页 -->
+            <div id="result-page" class="page fade-in text-center">
+                <div id="uploading" class="py-10">
+                    <div class="spinner mx-auto mb-4"></div>
+                    <p class="text-slate-500">正在同步评估数据到云端...</p>
+                </div>
+                <div id="success" class="hidden">
+                    <div class="inline-flex items-center justify-center w-20 h-20 bg-emerald-100 rounded-full mb-6">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">评估已成功提交</h2>
+                    <p class="text-slate-500 mb-8">数据已安全存入您的咨询师云端库。</p>
+                    <div class="bg-slate-50 rounded-2xl p-6 text-left mb-8 border border-slate-200">
+                        <p class="text-sm font-bold text-slate-600 mb-2">后续操作：</p>
+                        <p class="text-sm text-slate-500">您的咨询师将在后台整合所有家庭成员的数据，并为您生成深度多视角对比分析报告。请耐心等待通知。</p>
+                    </div>
+                    <button onclick="location.reload()" class="text-sm text-slate-400 hover:text-blue-600 transition-colors">重新填写</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://nzaezitppnjkprlpikgl.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_wbpkXXj46vShKk77Ti4p5A_b5eOIJrR';
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const questions = [{"维度":"家庭结构与规则","母亲":"我在家庭中的参与度达到了/超越了家人的期待","父亲":"孩子妈妈在家庭中的参与度达到了/超越了我的期待","孩子":"妈妈在家庭中的参与度达到了/超越了我的期待"},{"维度":"家庭结构与规则","母亲":"孩子爸爸在家庭中的参与度达到了/超越了我的期待","父亲":"我在家庭中的参与度达到了/超越了家人的期待","孩子":"爸爸在家庭中的参与度达到了/超越了我的期待"},{"维度":"家庭结构与规则","母亲":"家庭中的重大决定通常由父母负责做出。","父亲":"家庭中的重大决定通常由父母负责做出。","孩子":"家庭中的重大决定通常由爸妈负责做出。"},{"维度":"家庭结构与规则","母亲":"家庭规则是明确且长期稳定的。","父亲":"家庭规则是明确且长期稳定的。","孩子":"家庭规则是明确且长期稳定的。"},{"维度":"家庭结构与规则","母亲":"家庭规则经常因情绪或冲突而改变。（R）","父亲":"家庭规则经常因情绪或冲突而改变。（R）","孩子":"家里的规矩比较稳定，不会因为心情好坏就变。（R）"},{"维度":"家庭结构与规则","母亲":"家庭中的角色边界不够清晰，孩子有时需要承担或处理本应由父母负责的情绪与问题。（R）","父亲":"家庭中的角色边界不够清晰，孩子有时需要承担或处理本应由父母负责的情绪与问题。（R）","孩子":"我有时候觉得自己更像家里的“大人”。（R）"},{"维度":"家庭结构与规则","母亲":"当出现分歧时，家庭有清晰的决策方式。","父亲":"当出现分歧时，家庭有清晰的决策方式。","孩子":"当出现分歧时，家庭有清晰的决策方式。"},{"维度":"情绪氛围系统","母亲":"家庭整体氛围是安全和放松的。","父亲":"家庭整体氛围是安全和放松的.","孩子":"我觉得家里很安全，很放松."},{"维度":"情绪氛围系统","母亲":"家庭中存在较多焦虑或担忧情绪。（R）","父亲":"家庭中存在较多焦虑或担忧情绪。（R）","孩子":"家里总总是很多焦虑或担心的感觉。（R）"},{"维度":"情绪氛围系统","母亲":"父母能觉察到孩子情绪变化。","父亲":"父母能觉察到孩子情绪变化。","孩子":"爸妈能发现我的心情变化。"},{"维度":"情绪氛围系统","母亲":"孩子在家里可以表达真实情绪。","父亲":"孩子在家里可以表达真实情绪.","孩子":"我在家里可以表达真实的心情."},{"维度":"情绪氛围系统","母亲":"冲突后家庭气氛长期难以恢复。（R）","父亲":"冲突后家庭气氛长期难以恢复。（R）","孩子":"冲突后家庭气氛长期难以恢复。（R）"},{"维度":"情绪氛围系统","母亲":"父母在面对孩子问题时情绪比较稳定。","父亲":"父母在面对孩子问题时情绪比较稳定.","孩子":"爸妈处理我的问题时情绪比较稳定."},{"维度":"沟通模式系统","母亲":"家庭成员之间可以坦诚表达自己的想法。","父亲":"家庭成员之间可以坦诚表达自己的想法.","孩子":"家庭成员之间可以坦诚表达自己的想法."},{"维度":"沟通模式系统","母亲":"家庭成员之间经常出现激烈冲突（R）","父亲":"家庭成员之间经常出现激烈冲突（R）","孩子":"家里人经常吵得很凶。（R）"},{"维度":"沟通模式系统","母亲":"家庭成员之间不太有激烈冲突，但气氛是紧张和压抑的（R）","父亲":"家庭成员之间不太有激烈冲突，但气氛是紧张和压抑的（R）","孩子":"家里人经常不太吵架，但家里气氛总是紧张或者压抑的（R）"},{"维度":"沟通模式系统","母亲":"在发生冲突之后，家庭成员能够重新进行沟通并修复关系","父亲":"在发生冲突之后，家庭成员能够重新进行沟通并修复关系","孩子":"吵架后我们家能好好谈谈来和好。"},{"维度":"沟通模式系统","母亲":"当孩子表达不同意见时，我会认真倾听。","父亲":"当孩子表达不同意见时，我会认真倾听.","孩子":"当我表达不同意见时，爸妈会认真倾听."},{"维度":"亲子关系与依附","母亲":"孩子刻意对我隐瞒重要事情。（R）","父亲":"孩子刻意对我隐瞒重要事情。（R）","孩子":"我更愿意向外人倾诉而不是父母。（R）"},{"维度":"亲子关系与依附","母亲":"孩子在情绪低落时愿意与我分享。","父亲":"孩子在情绪低落时愿意与我分享。","孩子":"我在情绪低落时愿意与爸妈分享.（R）"},{"维度":"亲子关系与依附","母亲":"孩子遇到困难愿意寻求父母帮助。","父亲":"孩子遇到困难愿意寻求父母帮助。","孩子":"我遇到困难愿意找爸妈帮忙。"},{"维度":"亲子关系与依附","母亲":"孩子对家庭的归属感较弱。（R）","父亲":"孩子对家庭的归属感较弱。（R）","孩子":"我在家里没什么归属感。（R）"},{"维度":"亲子关系与依附","母亲":"孩子感觉父母理解自己。","父亲":"孩子感觉父母理解自己。","孩子":"我觉得爸妈理解我。"},{"维度":"亲子关系与依附","母亲":"家庭成员关系总体亲近。","父亲":"家庭成员关系总体亲近。","孩子":"我们家人的关系总体很亲近。"},{"维度":"自主与边界系统","母亲":"父母尊重孩子隐私。","父亲":"父母尊重孩子隐私。","孩子":"爸妈尊重我的隐私。"},{"维度":"自主与边界系统","母亲":"我很难接受孩子有不同的价值观(R）","父亲":"我很难接受孩子有不同的价值观(R）","孩子":"当我表现出跟爸妈不同的观点/想法时，他们常常难以接受(R）"},{"维度":"自主与边界系统","母亲":"我允许孩子在合理范围内做自己的决定。","父亲":"我允许孩子在合理范围内做自己的决定.","孩子":"爸妈允许我在合理范围内做自己的决定.（R）"},{"维度":"自主与边界系统","母亲":"父母给孩子足够的个人空间，不会管得太多（如过度介入孩子和朋友的关系）。","父亲":"父母给孩子足够的个人空间，不会管得太多（如过度介入孩子和朋友的关系）。","孩子":"爸妈给我足够的个人空间，不会管得太多（如过度介入我和朋友的关系）。"},{"维度":"自主与边界系统","母亲":"孩子跟我很难既保持亲近又同时保持独立，我们的关系总是在两者间摇摆(R）","父亲":"孩子跟我很难既保持亲近又同时保持独立，我们的关系总是在两者间摇摆(R）","孩子":"我很难跟爸妈既保持亲近又同时保持独立，总是在两者间摇摆(R）"},{"维度":"压力与资源系统","母亲":"孩子面临较大学业压力。","父亲":"孩子面临较大学业压力.（R）","孩子":"我的学业压力很大.（R）"},{"维度":"压力与资源系统","母亲":"父母工作压力影响家庭氛围。（R）","父亲":"父母工作压力影响家庭氛围。（R）","孩子":"爸妈的工作压力影响了家里的气氛。（R）"},{"维度":"压力与资源系统","母亲":"家庭经济压力较大。（R）","父亲":"家庭经济压力较大。（R）","孩子":"家里的经济压力比较大。（R）"},{"维度":"压力与资源系统","母亲":"家庭有足够时间相处，并互相给与情感支持.","父亲":"家庭有足够时间相处，并互相给与情感支持.","孩子":"我们家人有足够的时间在一起，并互相给与情感支持."},{"维度":"压力与资源系统","母亲":"家庭拥有稳定的社会支持网络，有需要/困难时总能获得外部支持","父亲":"家庭拥有稳定的社会支持网络，有需要/困难时总能获得外部支持","孩子":"家里遇到困难时能得到外面的支持（如亲戚、朋友）。"},{"维度":"压力与资源系统","母亲":"家庭整体压力处于可控范围。","父亲":"家庭整体压力处于可控范围.","孩子":"家庭整体压力处于可控范围."},{"维度":"成长动力与意义","母亲":"孩子对未来有目标或方向。","父亲":"孩子对未来有目标或方向。","孩子":"我对未来有目标或方向。"},{"维度":"成长动力与意义","母亲":"家庭中会讨论人生意义","父亲":"家庭中会讨论人生意义","孩子":"家庭中会讨论人生意义"},{"维度":"成长动力与意义","母亲":"家庭鼓励孩子成长探索。","父亲":"家庭鼓励孩子成长探索。","孩子":"家庭鼓励孩子成长探索。"},{"维度":"成长动力与意义","母亲":"家庭氛围允许探索失败，支持持续探索或改变方向","父亲":"家庭氛围允许探索失败，支持持续探索或改变方向","孩子":"家庭氛围允许探索失败，支持持续探索或改变方向"},{"维度":"成长动力与意义","母亲":"家庭成员对重要价值观基本一致。","父亲":"家庭成员对重要价值观基本一致。","孩子":"家庭成员对重要价值观基本一致。"},{"维度":"成长动力与意义","母亲":"家庭过于强调成绩而忽视成长过程。（R）","父亲":"家庭过于强调成绩而忽视成长过程。（R）","孩子":"家庭过于强调成绩而忽视成长过程。（R）"}];
+
+        let familyCode = '';
+        let currentRole = '';
+        let currentIndex = 0;
+        let answers = [];
+
+        function checkAndStart(role) {
+            const codeInput = document.getElementById('family-code').value.trim();
+            if (!codeInput) { alert('⚠️ 请输入家庭识别码！'); return; }
+            familyCode = codeInput; currentRole = role; currentIndex = 0; answers = [];
+            document.getElementById('role-badge').innerText = role;
+            showPage('survey-page'); updateQuestion();
+        }
+
+        function showPage(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            window.scrollTo(0, 0);
+        }
+
+        function updateQuestion() {
+            const q = questions[currentIndex];
+            document.getElementById('question-text').innerText = q[currentRole];
+            document.getElementById('progress-bar').style.width = ((currentIndex + 1) / questions.length * 100) + '%';
+            document.getElementById('progress-text').innerText = `${currentIndex + 1} / ${questions.length}`;
+            document.getElementById('dimension-tag').innerText = q['维度'];
+        }
+
+        function recordAnswer(val) {
+            const q = questions[currentIndex];
+            const text = q[currentRole];
+            const isReverse = text.includes('（R）') || text.includes('(R）') || text.includes('(R)');
+            answers.push({ dimension: q['维度'], score: isReverse ? (6 - val) : val });
+
+            if (currentIndex < questions.length - 1) { currentIndex++; updateQuestion(); } 
+            else { uploadToCloud(); }
+        }
+
+        async function uploadToCloud() {
+            showPage('result-page');
+            try {
+                const { data, error } = await supabase
+                    .from('assessment_results')
+                    .insert([{ family_code: familyCode, role: currentRole, results: answers }]);
+                if (error) throw error;
+                document.getElementById('uploading').classList.add('hidden');
+                document.getElementById('success').classList.remove('hidden');
+            } catch (err) {
+                alert('云端同步失败，请检查网络并重试。错误信息：' + err.message);
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+</html>
